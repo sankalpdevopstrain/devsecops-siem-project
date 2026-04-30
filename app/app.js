@@ -10,7 +10,7 @@ app.use(express.json());
 let logs = [];
 
 // =======================
-// LOGGING MIDDLEWARE
+// MIDDLEWARE LOGGER
 // =======================
 app.use((req, res, next) => {
     console.log(`[LOG] ${new Date().toISOString()} - ${req.method} ${req.url}`);
@@ -21,20 +21,23 @@ app.use((req, res, next) => {
 // HEALTH CHECK
 // =======================
 app.get('/health', (req, res) => {
-    res.json({ status: "OK", service: "SIEM Dashboard Running" });
+    res.json({ status: "OK", service: "Mini SIEM Running" });
 });
 
 // =======================
-// MAIN DASHBOARD (ROOT UI)
+// MAIN DASHBOARD
 // =======================
 app.get('/', (req, res) => {
 
     const totalEvents = logs.length;
 
-    const alerts = logs.filter(l =>
-        l.level === 'error' ||
-        l.type === 'failed_login'
-    ).length;
+    // ALERT ENGINE
+    let alerts = 0;
+
+    logs.forEach(l => {
+        if (l.severity === 'high') alerts++;
+        if (l.severity === 'critical') alerts++;
+    });
 
     const recentLogs = logs.slice(-10).reverse();
 
@@ -58,10 +61,6 @@ app.get('/', (req, res) => {
             border-radius: 10px;
         }
 
-        .alert {
-            color: #ff4d4d;
-        }
-
         .event {
             background: #0b1220;
             padding: 10px;
@@ -70,11 +69,16 @@ app.get('/', (req, res) => {
             white-space: pre-wrap;
         }
 
-        .failed_login {
+        .high {
             border-left: 4px solid #ff4d4d;
         }
 
-        .login_success {
+        .critical {
+            border-left: 4px solid #ff0000;
+            background: rgba(255,0,0,0.05);
+        }
+
+        .low {
             border-left: 4px solid #2ea043;
         }
 
@@ -91,16 +95,17 @@ app.get('/', (req, res) => {
 <div class="box">
     <h2>Summary</h2>
     <p>📊 Events: <b>${totalEvents}</b></p>
-    <p class="alert">🚨 Alerts: <b>${alerts}</b></p>
+    <p style="color:#ff4d4d;">🚨 Alerts: <b>${alerts}</b></p>
 </div>
 
 <div class="box">
     <h2>Recent Events</h2>
 
-    ${recentLogs.length === 0
-        ? `<p>No logs yet. Send some via /logs POST or webhook.</p>`
+    ${
+        recentLogs.length === 0
+        ? `<p>No logs yet. Send data via /logs or webhook.</p>`
         : recentLogs.map(log => `
-            <div class="event ${log.type || log.level || ''}">
+            <div class="event ${log.severity || ''}">
                 ${JSON.stringify(log, null, 2)}
             </div>
         `).join('')
@@ -114,13 +119,22 @@ app.get('/', (req, res) => {
 });
 
 // =======================
-// LOG INGESTION (MANUAL + CI/CD + EC2)
+// LOG INGESTION
 // =======================
 app.post('/logs', (req, res) => {
 
+    const raw = req.body;
+
+    let severity = "low";
+
+    if (raw.type === "failed_login") severity = "high";
+    if (raw.level === "error") severity = "critical";
+    if (raw.type === "login_success") severity = "low";
+
     const log = {
         timestamp: new Date().toISOString(),
-        ...req.body
+        severity,
+        ...raw
     };
 
     logs.push(log);
@@ -131,28 +145,27 @@ app.post('/logs', (req, res) => {
 });
 
 // =======================
-// GITHUB WEBHOOK (FIXED)
+// GITHUB WEBHOOK
 // =======================
 app.post('/github-webhook', (req, res) => {
-
-    const event = req.headers['x-github-event'];
 
     const log = {
         timestamp: new Date().toISOString(),
         source: "github",
-        event: event,
+        severity: "low",
+        event: req.headers['x-github-event'],
         payload: req.body
     };
 
     logs.push(log);
 
-    console.log('[GITHUB WEBHOOK]', event);
+    console.log('[GITHUB WEBHOOK]', log.event);
 
     res.status(200).send('Webhook received');
 });
 
 // =======================
-// RAW LOG VIEW (API)
+// RAW LOGS API
 // =======================
 app.get('/logs', (req, res) => {
     res.json(logs);
