@@ -10,7 +10,7 @@ app.use(express.json());
 let logs = [];
 
 // =======================
-// MIDDLEWARE LOGGER
+// LOGGING MIDDLEWARE
 // =======================
 app.use((req, res, next) => {
     console.log(`[LOG] ${new Date().toISOString()} - ${req.method} ${req.url}`);
@@ -18,11 +18,23 @@ app.use((req, res, next) => {
 });
 
 // =======================
-// DASHBOARD UI (MAIN PAGE)
+// HEALTH CHECK
+// =======================
+app.get('/health', (req, res) => {
+    res.json({ status: "OK", service: "SIEM Dashboard Running" });
+});
+
+// =======================
+// MAIN DASHBOARD (ROOT UI)
 // =======================
 app.get('/', (req, res) => {
+
     const totalEvents = logs.length;
-    const alerts = logs.filter(l => l.level === 'error' || l.type === 'failed_login').length;
+
+    const alerts = logs.filter(l =>
+        l.level === 'error' ||
+        l.type === 'failed_login'
+    ).length;
 
     const recentLogs = logs.slice(-10).reverse();
 
@@ -55,6 +67,7 @@ app.get('/', (req, res) => {
             padding: 10px;
             margin: 8px 0;
             border-left: 4px solid #2f81f7;
+            white-space: pre-wrap;
         }
 
         .failed_login {
@@ -65,8 +78,8 @@ app.get('/', (req, res) => {
             border-left: 4px solid #2ea043;
         }
 
-        pre {
-            margin: 0;
+        h1 {
+            color: #58a6ff;
         }
     </style>
 </head>
@@ -84,11 +97,14 @@ app.get('/', (req, res) => {
 <div class="box">
     <h2>Recent Events</h2>
 
-    ${recentLogs.map(log => `
-        <div class="event ${log.type || log.level || ''}">
-            <pre>${JSON.stringify(log, null, 2)}</pre>
-        </div>
-    `).join('')}
+    ${recentLogs.length === 0
+        ? `<p>No logs yet. Send some via /logs POST or webhook.</p>`
+        : recentLogs.map(log => `
+            <div class="event ${log.type || log.level || ''}">
+                ${JSON.stringify(log, null, 2)}
+            </div>
+        `).join('')
+    }
 
 </div>
 
@@ -98,9 +114,10 @@ app.get('/', (req, res) => {
 });
 
 // =======================
-// LOG INGESTION (SIEM INPUT)
+// LOG INGESTION (MANUAL + CI/CD + EC2)
 // =======================
 app.post('/logs', (req, res) => {
+
     const log = {
         timestamp: new Date().toISOString(),
         ...req.body
@@ -110,16 +127,41 @@ app.post('/logs', (req, res) => {
 
     console.log('[INGESTED LOG]', log);
 
-    res.status(200).send('Log received');
+    res.json({ status: "received", log });
 });
 
 // =======================
-// API VIEW (RAW LOGS)
+// GITHUB WEBHOOK (FIXED)
+// =======================
+app.post('/github-webhook', (req, res) => {
+
+    const event = req.headers['x-github-event'];
+
+    const log = {
+        timestamp: new Date().toISOString(),
+        source: "github",
+        event: event,
+        payload: req.body
+    };
+
+    logs.push(log);
+
+    console.log('[GITHUB WEBHOOK]', event);
+
+    res.status(200).send('Webhook received');
+});
+
+// =======================
+// RAW LOG VIEW (API)
 // =======================
 app.get('/logs', (req, res) => {
     res.json(logs);
 });
 
+// =======================
+// START SERVER
+// =======================
 app.listen(port, () => {
     console.log(`App running on port ${port}`);
+    console.log(`Dashboard: http://localhost:${port}`);
 });
