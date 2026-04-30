@@ -4,125 +4,105 @@ const port = 3000;
 
 app.use(express.json());
 
-// =========================
-// In-memory SIEM storage
-// =========================
+// =======================
+// SIEM STORAGE
+// =======================
 let logs = [];
 
-// =========================
-// Middleware: log all traffic
-// =========================
+// =======================
+// MIDDLEWARE LOGGER
+// =======================
 app.use((req, res, next) => {
-    const log = {
-        timestamp: new Date().toISOString(),
-        level: "info",
-        source: "app",
-        message: `${req.method} ${req.url}`
-    };
-
-    logs.push(log);
-    console.log(`[LOG] ${log.timestamp} - ${log.message}`);
-
+    console.log(`[LOG] ${new Date().toISOString()} - ${req.method} ${req.url}`);
     next();
 });
 
-// =========================
-// DASHBOARD (MAIN UI)
-// =========================
+// =======================
+// DASHBOARD UI (MAIN PAGE)
+// =======================
 app.get('/', (req, res) => {
+    const totalEvents = logs.length;
+    const alerts = logs.filter(l => l.level === 'error' || l.type === 'failed_login').length;
+
+    const recentLogs = logs.slice(-10).reverse();
+
     res.send(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>DevSecOps SIEM Dashboard</title>
-        <style>
-            body {
-                font-family: Arial, sans-serif;
-                background: #0d1117;
-                color: #e6edf3;
-                margin: 0;
-                padding: 20px;
-            }
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mini SIEM Dashboard</title>
+    <style>
+        body {
+            background: #0d1117;
+            color: #e6edf3;
+            font-family: Arial;
+            padding: 20px;
+        }
 
-            h1 {
-                color: #00ff99;
-            }
+        .box {
+            background: #161b22;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+        }
 
-            .log {
-                background: #161b22;
-                padding: 10px;
-                margin: 8px 0;
-                border-left: 4px solid #00ff99;
-                border-radius: 5px;
-                font-size: 14px;
-            }
+        .alert {
+            color: #ff4d4d;
+        }
 
-            .error {
-                border-left-color: red;
-            }
+        .event {
+            background: #0b1220;
+            padding: 10px;
+            margin: 8px 0;
+            border-left: 4px solid #2f81f7;
+        }
 
-            .warn {
-                border-left-color: orange;
-            }
+        .failed_login {
+            border-left: 4px solid #ff4d4d;
+        }
 
-            .info {
-                border-left-color: #00ff99;
-            }
+        .login_success {
+            border-left: 4px solid #2ea043;
+        }
 
-            #container {
-                max-width: 900px;
-                margin: auto;
-            }
-        </style>
-    </head>
-    <body>
-        <div id="container">
-            <h1>🛡 DevSecOps SIEM Dashboard</h1>
-            <p>Live logs from Kubernetes / Jenkins / App</p>
+        pre {
+            margin: 0;
+        }
+    </style>
+</head>
 
-            <div id="logs">Loading logs...</div>
+<body>
+
+<h1>🛡 Mini SIEM Dashboard</h1>
+
+<div class="box">
+    <h2>Summary</h2>
+    <p>📊 Events: <b>${totalEvents}</b></p>
+    <p class="alert">🚨 Alerts: <b>${alerts}</b></p>
+</div>
+
+<div class="box">
+    <h2>Recent Events</h2>
+
+    ${recentLogs.map(log => `
+        <div class="event ${log.type || log.level || ''}">
+            <pre>${JSON.stringify(log, null, 2)}</pre>
         </div>
+    `).join('')}
 
-        <script>
-            async function fetchLogs() {
-                const res = await fetch('/logs');
-                const data = await res.json();
+</div>
 
-                document.getElementById('logs').innerHTML =
-                    data.slice(-20).reverse().map(log => `
-                        <div class="log \${log.level}">
-                            <b>[\${log.timestamp}]</b>
-                            <b>\${log.level.toUpperCase()}</b>
-                            - \${log.message}
-                            <br><small>source: \${log.source || 'unknown'}</small>
-                        </div>
-                    `).join('');
-            }
-
-            setInterval(fetchLogs, 3000);
-            fetchLogs();
-        </script>
-    </body>
-    </html>
+</body>
+</html>
     `);
 });
 
-// =========================
-// GET logs (API endpoint)
-// =========================
-app.get('/logs', (req, res) => {
-    res.json(logs);
-});
-
-// =========================
-// POST logs (SIEM ingestion)
-// =========================
+// =======================
+// LOG INGESTION (SIEM INPUT)
+// =======================
 app.post('/logs', (req, res) => {
     const log = {
         timestamp: new Date().toISOString(),
-        level: req.body.level || "info",
-        source: req.body.source || "external",
-        message: req.body.message || "no message",
         ...req.body
     };
 
@@ -130,30 +110,16 @@ app.post('/logs', (req, res) => {
 
     console.log('[INGESTED LOG]', log);
 
-    res.status(200).json({ status: "received" });
+    res.status(200).send('Log received');
 });
 
-// =========================
-// Error route (for testing SIEM)
-// =========================
-app.get('/error', (req, res) => {
-    const log = {
-        timestamp: new Date().toISOString(),
-        level: "error",
-        source: "app",
-        message: "Simulated error triggered"
-    };
-
-    logs.push(log);
-
-    console.error('[ERROR]', log);
-
-    res.status(500).send('Error generated');
+// =======================
+// API VIEW (RAW LOGS)
+// =======================
+app.get('/logs', (req, res) => {
+    res.json(logs);
 });
 
-// =========================
-// Start server
-// =========================
 app.listen(port, () => {
-    console.log(`SIEM App running on port ${port}`);
+    console.log(`App running on port ${port}`);
 });
