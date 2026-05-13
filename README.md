@@ -1,5 +1,17 @@
 # DevSecOps SIEM Project
+- [DevSecOps SIEM Project](#devsecops-siem-project)
+  - [🚀 Tech Stack](#-tech-stack)
+  - [📂 Project Structure](#-project-structure)
+  - [Project overview:](#project-overview)
+  - [Architecture:](#architecture)
+  - [Jenkins-pipeline:](#jenkins-pipeline)
+  - [Docker-build:](#docker-build)
+  - [Kubernetes-deployment:](#kubernetes-deployment)
+  - [Siem-dashboard:](#siem-dashboard)
+  - [Webhook-integration:](#webhook-integration)
+  - [Final-demo:](#final-demo)
 
+---
 Cloud-native DevSecOps project implementing a CI/CD pipeline with Jenkins, Docker, Kubernetes, and SIEM-style log monitoring (ELK stack).
 
 ---
@@ -44,28 +56,9 @@ Cloud-native DevSecOps project implementing a CI/CD pipeline with Jenkins, Docke
 [07-webhook-integration](docs/07-webhook-integration.md)
 
 ## Final-demo:
+[08-final-demo](docs/08-final-demo.md)
 
 
-## Architecture:
-
-
-## Pipeline:
-
-
-## Troubleshooting:
-
-
-## User-guide
-
-
-      
-
-07-webhook-integration
-08-final-demo
-architecture    
-pipeline         
-troubleshooting
-user-guide
           
 
  

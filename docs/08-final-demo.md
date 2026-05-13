@@ -1,5 +1,31 @@
 # 🚀 Final System Demo — DevSecOps SIEM Platform
 
+- [🚀 Final System Demo — DevSecOps SIEM Platform](#-final-system-demo--devsecops-siem-platform)
+  - [🎯 Demo Objective](#-demo-objective)
+  - [🧠 End-to-End System Flow](#-end-to-end-system-flow)
+  - [🏗 Full Architecture (Live System Behaviour)](#-full-architecture-live-system-behaviour)
+  - [🔁 Live Demo Walkthrough (What Happens in Real Time)](#-live-demo-walkthrough-what-happens-in-real-time)
+    - [Step 1 — Code Push Trigger](#step-1--code-push-trigger)
+    - [Step 2 — Jenkins CI/CD Execution](#step-2--jenkins-cicd-execution)
+    - [Step 3 — Docker Container Build](#step-3--docker-container-build)
+    - [Step 4 — Kubernetes Deployment](#step-4--kubernetes-deployment)
+    - [Step 5 — SIEM Log Generation](#step-5--siem-log-generation)
+    - [Step 6 — SIEM Dashboard Visualisation](#step-6--siem-dashboard-visualisation)
+  - [🔐 Security Highlights](#-security-highlights)
+  - [🧠 Key Technical Skills Demonstrated](#-key-technical-skills-demonstrated)
+  - [🖥 SIEM Dashboard — Initial System State](#-siem-dashboard--initial-system-state)
+  - [🚨 SIEM Dashboard — Live Event Detection](#-siem-dashboard--live-event-detection)
+  - [🎨 Alert Visualisation](#-alert-visualisation)
+  - [⚙ CI/CD Pipeline Execution](#-cicd-pipeline-execution)
+    - [Pipeline Overview](#pipeline-overview)
+    - [Job 1 — CI Build](#job-1--ci-build)
+    - [Job 2 — Container Build \& Release](#job-2--container-build--release)
+    - [Job 3 — Cluster Deployment](#job-3--cluster-deployment)
+    - [Full Pipeline Execution](#full-pipeline-execution)
+  - [🔗 GitHub Webhook Automation](#-github-webhook-automation)
+    - [Live Webhook Demonstration](#live-webhook-demonstration)
+  - [Final End-to-End Platform Demonstration:](#final-end-to-end-platform-demonstration)
+
 ---
 
 ## 🎯 Demo Objective
@@ -213,3 +239,34 @@ This confirms:
 * Operational traceability
 
 ![All 3 jobs sucessfully running](image-13.png)
+
+---
+## 🔗 GitHub Webhook Automation
+
+The platform uses GitHub webhooks to automatically trigger the Jenkins CI/CD pipeline whenever new code is pushed to the repository.
+
+This validates:
+
+* Real-time event-driven automation
+* Automatic Jenkins pipeline execution
+* Zero manual deployment intervention
+* Full CI/CD traceability
+
+### Live Webhook Demonstration
+
+The following demonstration shows:
+
+1. Source code pushed to GitHub
+2. GitHub webhook event generated
+3. Jenkins automatically triggered
+4. CI Build → Container Build → Kubernetes Deployment completed successfully
+
+**Jenkins Console Validation:**
+
+> Started by GitHub push by sankalpdevopstrain
+
+That “Started by GitHub push...” line is powerful proof.
+
+---
+## Final End-to-End Platform Demonstration:
+![DevSecOps](DevSecOps.gif)
