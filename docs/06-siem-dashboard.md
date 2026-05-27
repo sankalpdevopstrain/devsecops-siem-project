@@ -1,164 +1,143 @@
-# 🛡 SIEM Dashboard (Security Monitoring & Log Analysis)
-
-- [🛡 SIEM Dashboard (Security Monitoring \& Log Analysis)](#-siem-dashboard-security-monitoring--log-analysis)
-  - [🎯 Objective](#-objective)
-  - [🧪 What This SIEM Simulates](#-what-this-siem-simulates)
-  - [👶 How the Dashboard Works (Simple View)](#-how-the-dashboard-works-simple-view)
-  - [🧠 How It Works (Technical View)](#-how-it-works-technical-view)
-    - [Core Flow:](#core-flow)
-  - [🚨 Alert \& Severity Logic](#-alert--severity-logic)
-    - [Example logic used in system:](#example-logic-used-in-system)
-  - [📡 Log Sources](#-log-sources)
-    - [1. Application Logs](#1-application-logs)
-    - [2. Manual API Logs](#2-manual-api-logs)
-    - [3. GitHub Webhook Events](#3-github-webhook-events)
-    - [4. CI/CD Pipeline Events](#4-cicd-pipeline-events)
-  - [🏗 Dashboard Architecture Diagram](#-dashboard-architecture-diagram)
-  - [📊 Diagram Explanation](#-diagram-explanation)
-  - [🔐 Security Value](#-security-value)
+# 🛡 SIEM Dashboard
 
 ---
 
-## 🎯 Objective
+## Overview
 
-The SIEM dashboard was built to simulate a lightweight Security Information and Event Management (SIEM) system.
+The SIEM (Security Information and Event Management) dashboard is a custom-built security monitoring tool created from scratch using Node.js and Express. It collects events from multiple sources, classifies them by severity, and displays them in a live browser dashboard.
 
-Its purpose is to:
-
-- Collect security-relevant logs
-- Detect suspicious activity patterns
-- Classify events into alerts
-- Provide real-time visibility through a web dashboard
-
-This replicates how enterprise SOC (Security Operations Centre) platforms operate at a simplified level.
+This is the part of the project that goes beyond standard DevOps — it adds security visibility directly into the delivery pipeline.
 
 ---
 
-## 🧪 What This SIEM Simulates
+## Dashboard Architecture
 
-This project simulates real-world security monitoring concepts such as:
-
-- Failed authentication attempts
-- Application error events
-- API activity monitoring
-- CI/CD pipeline logs
-- Webhook security events (GitHub → Jenkins)
+![SIEM Dashboard Architecture](image-5.png)
 
 ---
 
-## 👶 How the Dashboard Works (Simple View)
+## How It Works
 
-Think of this system like a **security CCTV system for software**:
-
-- Every action (login, API call, deployment) is recorded
-- Important or suspicious actions are flagged
-- Everything is shown in a live dashboard
-
-Example:
-
-- ❌ Failed login → Alert triggered
-- ✅ Successful deployment → Logged event
-- ⚠️ Error in application → Highlighted in dashboard
-
----
-
-## 🧠 How It Works (Technical View)
-
-The SIEM dashboard is built using:
-
-- Node.js (backend runtime)
-- Express.js (API + UI layer)
-- In-memory log storage (array-based simulation)
-- REST API endpoints for log ingestion
-
-### Core Flow:
-
-1. Logs are sent via API (`/logs`) or webhook (`/github-webhook`)
-2. Logs are stored in memory
-3. Dashboard processes logs dynamically
-4. UI renders:
-   - Total events
-   - Alerts count
-   - Recent security events
+```
+Log Source (Jenkins / GitHub / EC2 / Manual)
+        │
+        ▼ HTTP POST /logs
+Express REST API
+        │
+        ▼
+In-Memory Log Store (array)
+        │
+        ▼
+Alert Engine (severity classification)
+        │
+        ▼
+Live Dashboard UI (browser at :8081)
+```
 
 ---
 
-## 🚨 Alert & Severity Logic
+## Severity Classification
 
-Events are classified based on simple security rules:
+The alert engine applies simple security rules to every incoming event:
 
-| Event Type | Severity | Reason |
-|------------|----------|--------|
-| failed_login | HIGH | Possible brute-force attempt |
-| error | MEDIUM | Application failure |
-| normal event | LOW | Informational logging |
+| Condition | Severity | Visual |
+|---|---|---|
+| `type === "failed_login"` | HIGH | 🟥 Red left border |
+| `level === "error"` | CRITICAL | 🔴 Red background |
+| All other events | LOW | 🟩 Green left border |
 
-### Example logic used in system:
-
-- If `type = failed_login` → treated as ALERT
-- If `level = error` → treated as ALERT
-- Otherwise → normal event
-
-This simulates basic SIEM correlation rules.
+This mirrors how enterprise SIEM platforms like Splunk apply correlation rules to classify events.
 
 ---
 
-## 📡 Log Sources
+## API Endpoints
 
-The system ingests logs from multiple sources:
+```
+POST /logs            Ingest a security event (JSON body)
+GET  /logs            Retrieve all stored events
+GET  /health          Health check — returns { status: "OK" }
+GET  /                Live dashboard UI
+POST /github-webhook  Receives GitHub push events
+```
 
-### 1. Application Logs
-Generated directly from the Node.js app
+### Example — Injecting a high severity event
 
-### 2. Manual API Logs
-Sent using `/logs` endpoint
+```bash
+curl -X POST http://localhost:8081/logs \
+  -H "Content-Type: application/json" \
+  -d '{"type":"failed_login","user":"admin","source_ip":"185.220.101.45"}'
+```
 
-### 3. GitHub Webhook Events
-Triggered by repository activity
-
-### 4. CI/CD Pipeline Events
-Generated by Jenkins during build and deployment
-
----
-
-## 🏗 Dashboard Architecture Diagram
-
-![Dashboard Architecture Diagram](image-5.png)
-
----
-
-## 📊 Diagram Explanation
-
-This architecture shows how security events flow through the system in real time.
-
-1. Logs are generated from different sources:
-   - Application activity
-   - GitHub repository events
-   - Jenkins CI/CD pipeline events
-
-2. These logs are sent to the SIEM application via:
-   - REST API (`/logs`)
-   - GitHub webhook (`/github-webhook`)
-
-3. The logs are stored in memory inside the Node.js application.
-
-4. A simple rule-based alert engine processes the logs:
-   - Detects failed logins
-   - Identifies errors
-   - Classifies event severity
-
-5. The processed data is displayed in a live dashboard.
+Response:
+```json
+{
+  "status": "received",
+  "log": {
+    "timestamp": "2026-05-22T11:44:03.944Z",
+    "severity": "high",
+    "type": "failed_login",
+    "user": "admin",
+    "source_ip": "185.220.101.45"
+  }
+}
+```
 
 ---
 
-## 🔐 Security Value
+## Log Sources
 
-Even though this is a lightweight SIEM simulation, it demonstrates key security engineering concepts:
+### Jenkins Events
+Build success, build failure, and deployment completion events are generated by the CI/CD pipeline.
 
-- Centralised log collection
-- Event correlation logic
-- Real-time monitoring
-- Alert classification
-- Visibility into CI/CD security events
+### GitHub Webhook Events
+Every push to the repository is received at `/github-webhook` and logged as a low severity event.
 
-This mirrors how SOC platforms like Splunk or ELK are used in enterprise environments.
+### AWS EC2 — Real System Logs
+The EC2 instance ships real system activity to the SIEM via the ngrok tunnel:
+
+```bash
+# On the EC2 instance
+log "apt-get update completed"
+log "Docker service restarted"
+sudo apt-get upgrade -y && log "System packages upgraded"
+```
+
+### Simulated Alert Events
+The `ec2-alerts.sh` script injects realistic high and critical events for demo purposes without affecting the EC2 machine.
+
+---
+
+## Dashboard Screenshots
+
+**Initial state — no events:**
+
+![SIEM Empty](image-7.png)
+
+**Live events — alerts detected:**
+
+![SIEM With Alerts](image-8.png)
+
+---
+
+## Security Value
+
+Even as a lightweight simulation, this dashboard demonstrates core security engineering concepts:
+
+- Centralised log collection from multiple sources
+- Rule-based event correlation
+- Real-time alert classification
+- Operational visibility across CI/CD and cloud infrastructure
+- Security embedded into the delivery pipeline — not separate from it
+
+This mirrors the architecture of enterprise SOC platforms like Splunk, Microsoft Sentinel, and the ELK stack.
+
+---
+
+## Known Limitations and Roadmap
+
+| Limitation | Planned Improvement |
+|---|---|
+| In-memory storage — logs lost on restart | Replace with MongoDB persistent storage |
+| Dashboard requires manual refresh | Add WebSocket auto-refresh |
+| No authentication on dashboard | Add basic auth layer |
+| Single node deployment | Scale horizontally via Kubernetes |

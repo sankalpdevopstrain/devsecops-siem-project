@@ -1,140 +1,101 @@
-# 🔗 GitHub Webhook Integration (Event-Driven CI/CD Trigger)
-- [🔗 GitHub Webhook Integration (Event-Driven CI/CD Trigger)](#-github-webhook-integration-event-driven-cicd-trigger)
-  - [🎯 Objective](#-objective)
-  - [⚙️ Why Webhooks Were Used](#️-why-webhooks-were-used)
-  - [🔁 High-Level Flow](#-high-level-flow)
-  - [🏗 Architecture Diagram (Webhook Flow)](#-architecture-diagram-webhook-flow)
-  - [📊 Explanation of Architecture Diagram](#-explanation-of-architecture-diagram)
-  - [🔧 Implementation Steps](#-implementation-steps)
-    - [Step 1 — Configure GitHub Webhook](#step-1--configure-github-webhook)
-    - [Step 2 — Expose Jenkins (Local Testing)](#step-2--expose-jenkins-local-testing)
-    - [Step 3 — Jenkins Configuration](#step-3--jenkins-configuration)
-    - [Step 4 — Test Webhook Trigger](#step-4--test-webhook-trigger)
-  - [🔐 Security Considerations](#-security-considerations)
-  - [📡 Event Payload Example](#-event-payload-example)
+# 🔗 GitHub Webhook Integration
 
 ---
 
-## 🎯 Objective
+## Overview
 
-The purpose of webhook integration in this project is to enable **automated CI/CD triggering** whenever changes are pushed to the GitHub repository.
-
-This removes the need for manual Jenkins job execution and creates a fully event-driven DevSecOps pipeline.
+GitHub webhooks create an event-driven CI/CD trigger — every `git push` automatically starts the Jenkins pipeline without any manual intervention. This is the core of the automation layer.
 
 ---
 
-## ⚙️ Why Webhooks Were Used
-
-Traditional CI/CD systems rely on polling or manual triggers, which introduce delays.
-
-Webhooks solve this by:
-
-- Triggering Jenkins instantly on code changes
-- Reducing deployment latency
-- Enabling real-time automation
-- Supporting event-driven architecture
-
----
-
-## 🔁 High-Level Flow
-
-1. Developer pushes code to GitHub
-2. GitHub sends a webhook event
-3. Jenkins receives the event
-4. Jenkins pipeline is triggered automatically
-5. CI/CD process begins (build → docker → deploy)
-
----
-
-## 🏗 Architecture Diagram (Webhook Flow)
+## Architecture Diagram
 
 ![Webhook Flow](image-6.png)
 
-## 📊 Explanation of Architecture Diagram
+---
 
-The diagram illustrates an event-driven DevSecOps workflow where a code change directly triggers automated deployment and security monitoring.
+## How It Works
 
-The process begins when a developer pushes code to the GitHub repository. This action generates a webhook event containing metadata such as commit details, branch information, and author identity.
+```
+Developer runs: git push origin main
+        │
+        ▼
+GitHub generates HTTP POST webhook event
+        │  payload includes: commit, branch, author
+        ▼
+ngrok public URL receives the request
+        │  https://previous-stinky-maturity.ngrok-free.dev/github-webhook/
+        ▼
+Jenkins receives and processes the event
+        │
+        ▼
+CI/CD pipeline starts automatically
+```
 
-The webhook is sent to Jenkins, which acts as the CI/CD orchestration engine. Jenkins is responsible for executing the pipeline without manual intervention, ensuring consistency and repeatability across deployments.
+---
 
-Within the CI/CD pipeline, Jenkins performs the following key stages:
+## GitHub Configuration
 
-- Retrieves the latest source code from GitHub  
-- Builds and validates the application  
-- Creates a Docker container image  
-- Deploys the application into a Kubernetes cluster  
+In the repository:
 
-Kubernetes then manages the runtime environment by scheduling pods, handling service exposure, and ensuring application availability and resilience.
-
-In parallel, system and application logs are generated from multiple sources, including Jenkins execution, application runtime events, Kubernetes activity, and GitHub webhook triggers.
-
-These logs are forwarded to the SIEM dashboard, where they are processed in real time. The system applies rule-based logic to classify events, detect anomalies such as failed logins or deployment errors, and visualise them as alerts.
-
-This architecture demonstrates a fully automated DevSecOps pipeline with integrated security monitoring, enabling continuous delivery alongside real-time operational visibility.
-
-## 🔧 Implementation Steps
-
-### Step 1 — Configure GitHub Webhook
-
-In the GitHub repository:
-
-- Navigate to **Settings → Webhooks**
-- Click **Add webhook**
-- Configure the following:
+**Settings → Webhooks → Add webhook**
 
 | Field | Value |
-|------|------|
-| Payload URL | `http://<jenkins-url>/github-webhook/` |
+|---|---|
+| Payload URL | `https://<ngrok-url>/github-webhook/` |
 | Content type | `application/json` |
-| Events | Push events |
+| Trigger | Push events |
 
 ---
 
-### Step 2 — Expose Jenkins (Local Testing)
+## ngrok Tunnel
 
-If running locally, tools like **ngrok** were used:
+Because Jenkins runs locally, ngrok creates a secure public HTTPS URL that GitHub can reach:
 
 ```bash
-ngrok http 8080
+ngrok start --all --config ~/ngrok.yml
 ```
 
-### Step 3 — Jenkins Configuration
+The fixed free-plan subdomain means the webhook URL stays the same across every restart — no reconfiguration needed.
 
-In Jenkins:
+---
 
-* Enable GitHub hook trigger for GITScm polling
-* Configure pipeline job with Git repository URL
-* Ensure credentials are set if required
+## Webhook Delivery Evidence
 
-### Step 4 — Test Webhook Trigger
+GitHub webhook delivery log showing successful delivery:
 
-A test commit was pushed:
+```
+Request URL:   https://previous-stinky-maturity.ngrok-free.dev/github-webhook/
+Response:      200 OK
+Completed in:  0.94 seconds
+X-Github-Event: push
+```
+
+Jenkins console confirming automatic trigger:
+
+```
+Started by GitHub push by sankalpdevopstrain
+```
+
+---
+
+## End-to-End Test
+
+To verify the webhook is working:
+
 ```bash
-git add .
-git commit -m "test webhook trigger"
+# Make an empty commit — no file changes needed
+git commit --allow-empty -m "webhook test"
 git push origin main
 ```
-This automatically triggered the Jenkins pipeline.
+
+Then watch Jenkins at `http://localhost:8080` — Job 1 starts within seconds automatically.
 
 ---
-## 🔐 Security Considerations
 
-Webhook integration introduces external access into the CI/CD pipeline, so security controls were considered:
+## Security Considerations
 
-* Restricted webhook access to trusted GitHub events
-* Jenkins protected using authentication
-* No public exposure of internal cluster endpoints
-* Controlled CI/CD permissions
-
----
-## 📡 Event Payload Example
-
-A typical GitHub webhook payload includes:
-
-* Repository information
-* Commit details
-* Author information
-* Branch reference
-
-This is used by Jenkins to trigger the correct pipeline execution.
+- All webhook traffic is delivered over HTTPS via ngrok
+- Jenkins is protected by authentication — unauthenticated users cannot access the UI
+- The ngrok tunnel only forwards traffic to Jenkins — no other internal services are exposed
+- Webhook secret can be added for payload verification (planned roadmap item)

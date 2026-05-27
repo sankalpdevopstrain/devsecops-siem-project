@@ -1,118 +1,69 @@
-# 🛡 DevSecOps SIEM Project Overview
-- [🛡 DevSecOps SIEM Project Overview](#-devsecops-siem-project-overview)
-  - [Project Summary](#project-summary)
-  - [Business Problem](#business-problem)
-  - [Technical Objectives](#technical-objectives)
-    - [1. CI/CD Automation](#1-cicd-automation)
-    - [2. Container Security](#2-container-security)
-    - [3. Orchestration](#3-orchestration)
-    - [4. Security Monitoring](#4-security-monitoring)
-    - [5. Visualisation](#5-visualisation)
-  - [Technologies Used](#technologies-used)
-  - [Skills Demonstrated](#skills-demonstrated)
-  - [Architecture diagram](#architecture-diagram)
-  - [Explanation of the Architecture Diagram](#explanation-of-the-architecture-diagram)
+# 🛡 Project Overview
+
+> DevSecOps SIEM Platform — Cloud-Native CI/CD Automation with Real-Time Security Monitoring
+
+---
 
 ## Project Summary
 
-This project was designed to simulate a real-world DevSecOps environment where application delivery, infrastructure automation, and security monitoring are integrated into a single workflow.
+This project was built to simulate a real-world DevSecOps environment where application delivery, infrastructure automation, and security monitoring operate as a single integrated platform.
 
-The goal was to build a cloud-native security platform capable of:
+It was developed independently after completing a DevOps training programme, extending the curriculum with Docker, Kubernetes, Terraform, and a custom-built SIEM dashboard — technologies not covered in the course.
 
-- Automating CI/CD deployments
-- Running containerised applications
-- Orchestrating workloads using Kubernetes
-- Ingesting and analysing security events
-- Visualising alerts in a custom SIEM dashboard
+The platform demonstrates the complete software delivery lifecycle:
+
+```
+Code Commit → Webhook Trigger → CI Build → Docker Image → Kubernetes Deploy → SIEM Monitoring
+```
 
 ---
 
 ## Business Problem
 
-Traditional deployments often separate development, operations, and security teams.
+In many organisations, development, operations, and security teams work in silos. This creates:
 
-This creates challenges such as:
-
-- Slow deployments
+- Slow, error-prone manual deployments
 - Poor visibility into infrastructure events
-- Delayed security detection
-- Manual operational overhead
+- Delayed detection of security incidents
+- Weak operational traceability
 
-This project solves that by integrating security monitoring directly into the deployment pipeline.
+This platform solves those problems by integrating all three disciplines into one automated, observable system.
 
 ---
 
 ## Technical Objectives
 
-This project was built to achieve the following:
-
-### 1. CI/CD Automation
-Automate build and deployment workflows using Jenkins.
-
-### 2. Container Security
-Package applications into Docker containers for consistency.
-
-### 3. Orchestration
-Deploy workloads into Kubernetes for scalability and resilience.
-
-### 4. Security Monitoring
-Simulate SIEM behaviour by collecting logs from:
-
-- Application events
-- Authentication events
-- Jenkins pipeline events
-- GitHub webhook events
-
-### 5. Visualisation
-Display live events inside a browser-based dashboard.
-
----
-
-## Technologies Used
-
-| Technology | Purpose |
-|------------|---------|
-| Node.js | SIEM dashboard application |
-| Express | API + UI backend |
-| Docker | Containerisation |
-| Kubernetes | Container orchestration |
-| Jenkins | CI/CD automation |
-| GitHub | Source control + webhook trigger |
-| ngrok | External webhook tunnelling |
-| ELK concepts | Logging architecture inspiration |
+| Objective | Implementation |
+|---|---|
+| Automate CI/CD | Jenkins 3-job pipeline triggered by GitHub webhook |
+| Containerise the application | Docker image built and pushed to DockerHub |
+| Orchestrate workloads | Kubernetes deployment with 2 replicas |
+| Provision cloud infrastructure | AWS EC2 via Terraform (Infrastructure as Code) |
+| Monitor security events | Custom Node.js SIEM dashboard |
+| Ship real cloud logs | EC2 → ngrok → SIEM dashboard |
 
 ---
 
 ## Skills Demonstrated
 
-This project demonstrates:
-
 - DevSecOps engineering
-- Infrastructure automation
-- Kubernetes operations
-- Secure deployment practices
-- Log ingestion pipelines
-- Security event analysis
+- CI/CD pipeline automation
+- Linux operations
+- Docker containerisation
+- Kubernetes orchestration
+- GitHub webhook integration
+- Infrastructure as Code (Terraform)
+- AWS EC2 provisioning
+- Node.js backend development
+- Security event monitoring
+- Bash scripting and platform automation
 
 ---
-## Architecture diagram
-![DevSecops SIEM Platform](image.png)
 
-## Explanation of the Architecture Diagram
+## Architecture Overview
 
-The architecture follows a secure DevSecOps delivery model, where application development, deployment automation, and security monitoring are integrated into a single operational workflow.
+![Architecture Diagram](image.png)
 
-The process begins with a developer committing code changes to GitHub. A GitHub webhook then triggers Jenkins, which acts as the CI/CD orchestrator responsible for validating the codebase, executing pipeline stages, and building the application container image.
+The architecture follows a secure, event-driven DevSecOps delivery model.
 
-Once successfully built, the Docker image is deployed into a Kubernetes environment, where the application runs across containerised workloads designed for scalability, resilience, and service availability.
-
-As the platform operates, security-relevant telemetry is continuously generated from multiple sources, including:
-
-- Application runtime events
-- Authentication and access events
-- Jenkins pipeline execution logs
-- GitHub repository activity
-
-These events are ingested by the SIEM monitoring layer, where they are normalised, analysed, and displayed through the custom security dashboard.
-
-This architecture demonstrates how security can be embedded directly into the software delivery lifecycle, enabling faster deployments, improved visibility, and proactive threat detection.
+A developer pushes code to GitHub, which fires a webhook to Jenkins via an ngrok tunnel. Jenkins runs three chained jobs — building the Docker image, pushing it to DockerHub, and deploying it to Kubernetes. Simultaneously, an AWS EC2 instance provisioned via Terraform ships real system logs through the ngrok tunnel into the custom SIEM dashboard, providing live security visibility across the entire platform.

@@ -1,168 +1,105 @@
-# System Architecture and Design Decisions
-- [System Architecture and Design Decisions](#system-architecture-and-design-decisions)
-  - [Architecture Goal](#architecture-goal)
-  - [Core Components](#core-components)
-    - [1. Source Control Layer](#1-source-control-layer)
-    - [2. CI/CD Layer](#2-cicd-layer)
-    - [3. Containerisation Layer](#3-containerisation-layer)
-    - [4. Orchestration Layer](#4-orchestration-layer)
-    - [5. Security Monitoring Layer](#5-security-monitoring-layer)
-  - [Design Decisions](#design-decisions)
-  - [Architecture Considerations](#architecture-considerations)
-  - [Component Architecture Diagram](#component-architecture-diagram)
-  - [Diagram Explanation](#diagram-explanation)
+# 🏗 System Architecture
+
+---
 
 ## Architecture Goal
 
-The primary goal of this architecture was to build a secure, scalable, and automated DevSecOps platform capable of:
-
-- Continuous integration and deployment
-- Container-based application delivery
-- Event-driven automation
-- Real-time security event monitoring
+The platform was designed around five integrated layers, each with a clear responsibility. The goal was to build a system where security is embedded directly into the delivery pipeline — not bolted on afterwards.
 
 ---
 
-## Core Components
+## Architecture Diagram
 
-### 1. Source Control Layer
-
-Code is maintained in the repository hosted on GitHub.
-
-Responsibilities:
-
-- Version control
-- Branch management
-- Commit history
-- Webhook event generation
-
-Security Benefits:
-
-- Full change traceability
-- Auditability of commits
-- Secure collaboration
+![Component Architecture Diagram](image-1.png)
 
 ---
 
-### 2. CI/CD Layer
+## Layer Breakdown
 
-Jenkins was selected as the automation engine.
+### 1. Source Control — GitHub
 
-Responsibilities:
+Every change starts here. A developer pushes code and GitHub automatically generates a webhook event containing the commit details, branch, and author.
 
-- Pull source code
-- Execute pipeline stages
-- Build Docker containers
-- Trigger Kubernetes deployment
-
-Security Benefits:
-
-- Reduced manual deployment risk
-- Repeatable deployment workflows
-- Controlled release process
+**Security value:** Full change traceability. Every deployment is tied to a specific commit.
 
 ---
 
-### 3. Containerisation Layer
+### 2. Tunnelling — ngrok
 
-Docker was used to package the application.
+Because Jenkins runs locally, ngrok creates a secure public HTTPS tunnel so GitHub can deliver webhooks to it. The free plan provides a fixed subdomain, meaning the webhook URL never changes between restarts.
 
-Responsibilities:
-
-- Environment consistency
-- Dependency isolation
-- Portable deployments
-
-Security Benefits:
-
-- Reduced configuration drift
-- Predictable runtime behaviour
+```
+https://previous-stinky-maturity.ngrok-free.dev → localhost:8080
+```
 
 ---
 
-### 4. Orchestration Layer
+### 3. CI/CD — Jenkins
 
-Kubernetes was used to manage application workloads.
+Jenkins runs as a Docker container and orchestrates three chained jobs:
 
-Responsibilities:
+| Job | Responsibility |
+|---|---|
+| devsecops-ci-build | Pull code, build Docker image |
+| devsecops-cd-push | Tag and push image to DockerHub |
+| devsecops-cd-deploy | Apply Kubernetes manifests |
 
-- Pod scheduling
-- Service discovery
-- High availability
-- Scaling
-
-Security Benefits:
-
-- Self-healing workloads
-- Reduced downtime
-- Improved operational resilience
+Each job triggers the next automatically — zero manual intervention.
 
 ---
 
-### 5. Security Monitoring Layer
+### 4. Containerisation — Docker
 
-The custom SIEM dashboard collects and displays security events.
+The SIEM application is packaged into a Docker image containing the Node.js runtime, application code, and all dependencies. This ensures identical behaviour across every environment.
 
-Log Sources:
+The built image is stored in DockerHub under `sankalpdevops/devsecops-app:latest`.
 
-- Application logs
-- Authentication events
-- Jenkins pipeline events
-- GitHub webhook events
+---
 
-Security Benefits:
+### 5. Orchestration — Kubernetes
 
-- Faster threat visibility
-- Centralised event monitoring
-- Alert generation
+The application runs in a Kubernetes cluster with two replicas for resilience. If a pod fails, Kubernetes automatically restarts it — self-healing infrastructure with no manual intervention.
+
+```bash
+kubectl get pods        # 2/2 Running
+kubectl get deployments # 2/2 Available
+kubectl get svc         # NodePort exposed on :30564
+```
+
+---
+
+### 6. Cloud Infrastructure — AWS EC2 + Terraform
+
+An EC2 instance is provisioned entirely through Terraform. No manual steps in the AWS console. The instance runs Ubuntu 26.04 LTS on a t3.micro (free tier) inside a custom VPC.
+
+On first boot, a `user_data` bootstrap script automatically installs Docker and Node.js, then starts a log shipper service.
+
+---
+
+### 7. Security Monitoring — Custom SIEM Dashboard
+
+The SIEM dashboard is built with Node.js and Express. It exposes a REST API at `/logs` that accepts JSON events from any source. Events are classified by severity and displayed in a live browser dashboard.
+
+Real EC2 system logs flow through the ngrok tunnel directly into the dashboard, providing genuine cloud telemetry alongside simulated alert events.
 
 ---
 
 ## Design Decisions
 
-| Decision | Reason |
-|----------|--------|
-| Node.js backend | Lightweight and event-driven |
-| Docker containers | Portable deployment model |
-| Kubernetes | Production-style orchestration |
-| Jenkins | Industry-standard CI/CD |
-| GitHub webhooks | Real-time automation |
+| Decision | Rationale |
+|---|---|
+| Jenkins over GitHub Actions | Full pipeline control, enterprise adoption, runs locally |
+| Custom SIEM over existing tools | Demonstrates understanding of security principles, not just tool usage |
+| Terraform for EC2 | Reproducible infrastructure — core DevSecOps practice |
+| ngrok fixed subdomain | Persistent webhook URL without paid cloud hosting |
+| 2 Kubernetes replicas | Demonstrates high availability thinking |
 
 ---
 
-## Architecture Considerations
+## Security Considerations
 
-The platform was designed with the following engineering principles:
-
-- Scalability
-- Automation
-- Security visibility
-- Operational resilience
-- Observability
---
-## Component Architecture Diagram
-![Component Architecture Diagram](image-1.png)
-
-## Diagram Explanation
-
-This diagram illustrates the internal architecture of the DevSecOps SIEM platform and how each core component interacts throughout the software delivery lifecycle.
-
-The process begins when a developer pushes source code changes to GitHub. A webhook event is then generated, automatically triggering the Jenkins pipeline.
-
-Jenkins performs the CI/CD workflow, which includes:
-
-- Pulling the latest source code
-- Validating the build
-- Creating the Docker container image
-- Preparing the application for deployment
-
-Once the image is successfully built, it is deployed into the Kubernetes environment, where pods are created and scheduled automatically.
-
-Inside the running containers, the Express-based SIEM application processes incoming events and generates runtime security telemetry.
-
-These logs are passed into the internal log engine, where events such as authentication failures, webhook activity, and application events are analysed and classified.
-
-Finally, processed events are displayed through the browser-based dashboard, allowing security events and operational alerts to be monitored in real time.
-
-This architecture demonstrates secure automation, operational resilience, and continuous security visibility across the full application lifecycle.
-
+- All external access goes through ngrok HTTPS — no plain HTTP exposure
+- EC2 security group restricts inbound ports to 22, 80, 443, 3000 only
+- Terraform state files excluded from version control via `.gitignore`
+- SSH key pair managed as a Terraform resource
+- Jenkins credentials stored in Jenkins credential store (not hardcoded)

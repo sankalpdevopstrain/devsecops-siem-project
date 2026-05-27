@@ -1,209 +1,117 @@
-# Kubernetes Deployment and Orchestration
-
-- [Kubernetes Deployment and Orchestration](#kubernetes-deployment-and-orchestration)
-  - [Deployment Objective](#deployment-objective)
-  - [Why Kubernetes Was Used](#why-kubernetes-was-used)
-  - [Deployment Architecture](#deployment-architecture)
-    - [Deployment Resource](#deployment-resource)
-    - [Pod Layer](#pod-layer)
-    - [Service Layer](#service-layer)
-  - [Implementation Steps](#implementation-steps)
-    - [Step 1](#step-1)
-    - [Step 2](#step-2)
-    - [Step 3](#step-3)
-    - [Step 4](#step-4)
-    - [Step 5](#step-5)
-    - [Step 6](#step-6)
-  - [Operational Validation](#operational-validation)
-  - [Security Considerations](#security-considerations)
-  - [Kubernetes Architecture Diagram](#kubernetes-architecture-diagram)
-  - [Diagram Explanation](#diagram-explanation)
+# ☸ Kubernetes Deployment
 
 ---
 
-## Deployment Objective
+## Overview
 
-Kubernetes was implemented to orchestrate and manage the SIEM application in a production-style container environment.
-
-The objective was to provide:
-
-- Automated workload scheduling
-- High availability
-- Service discovery
-- Self-healing infrastructure
-- Scalable deployments
+Kubernetes manages the SIEM application in a production-style container environment. It handles scheduling, networking, self-healing, and scaling — removing the need for manual container management.
 
 ---
 
-## Why Kubernetes Was Used
+## Architecture Diagram
 
-Traditional container deployments often face operational limitations such as:
-
-- Manual container restarts
-- Service downtime
-- Poor scaling
-- Limited fault tolerance
-
-Kubernetes solves these issues by managing application workloads automatically.
-
-Key benefits:
-
-- Automatic pod recovery
-- Declarative infrastructure
-- Centralised workload management
-- Built-in service networking
+![Kubernetes Architecture](image-4.png)
 
 ---
 
-## Deployment Architecture
+## Why Kubernetes
 
-The SIEM application was deployed using:
+Running a single Docker container works for development but lacks resilience. Kubernetes adds:
 
-### Deployment Resource
+- **Self-healing** — failed pods are automatically restarted
+- **Scaling** — replicas handle increased load
+- **Service discovery** — stable internal networking
+- **Declarative config** — infrastructure defined as code in YAML
 
-Responsible for:
+---
 
-- Creating pods
-- Maintaining replica count
-- Restarting failed workloads
+## Cluster Setup
 
-Example command:
+The cluster runs via Docker Desktop's built-in Kubernetes on the local machine. This reflects a real Kubernetes environment without requiring cloud infrastructure.
+
+```bash
+kubectl config current-context
+# docker-desktop
+```
+
+---
+
+## Resources Deployed
+
+### Deployment
+
+Maintains 2 running replicas of the SIEM application at all times.
+
+```yaml
+replicas: 2
+image: sankalpdevops/devsecops-app:latest
+containerPort: 3000
+```
 
 ```bash
 kubectl get deployments
+# NAME            READY   UP-TO-DATE   AVAILABLE   AGE
+# devsecops-app   2/2     2            2           15d
 ```
 
----
+### Pods
 
-### Pod Layer
-
-Pods host the running application containers.
-
-Responsibilities:
-
-- Running application workloads
-- Receiving traffic
-- Processing logs
-
-Example command:
+Each pod runs one instance of the SIEM container.
 
 ```bash
 kubectl get pods
+# devsecops-app-7d58c886cf-ffxsg   1/1   Running   3   14d
+# devsecops-app-7d58c886cf-vxsrm   1/1   Running   3   14d
 ```
 
----
+### Service
 
-### Service Layer
-
-A Kubernetes service was created to expose the application.
-
-Responsibilities:
-
-- Internal networking
-- Traffic routing
-- Stable endpoint access
-
-Example command:
+A NodePort service routes external traffic to the pods.
 
 ```bash
 kubectl get svc
+# devsecops-app-service   NodePort   10.96.121.234   80:30564/TCP   15d
 ```
 
----
+### Port Forward
 
-## Implementation Steps
-
-### Step 1
-
-Created Kubernetes deployment manifest.
-
-### Step 2
-
-Created Kubernetes service manifest.
-
-### Step 3
-
-Applied manifests to the cluster.
-
-Command used:
-
-```bash
-kubectl apply -f k8s/
-```
-
-### Step 4
-
-Verified running pods.
-
-Command used:
-
-```bash
-kubectl get pods
-```
-
-### Step 5
-
-Validated service exposure.
-
-Command used:
+The SIEM dashboard is accessed locally via port-forward:
 
 ```bash
 kubectl port-forward svc/devsecops-app-service 8081:80
+# Forwarding from 127.0.0.1:8081 -> 3000
 ```
 
-### Step 6
+This is automated inside `scripts/start-platform.sh`.
 
-Accessed the SIEM dashboard through:
+---
+
+## Jenkins Deployment
+
+Job 3 applies the manifests automatically after every successful build:
 
 ```bash
-http://localhost:8081
+kubectl apply -f deployment.yaml
+kubectl apply -f service.yaml
+kubectl apply -f ingress.yaml
 ```
 
 ---
 
-## Operational Validation
+## Self-Healing Demonstration
 
-The deployment was validated through:
+The `RESTARTS` column in `kubectl get pods` shows Kubernetes has automatically recovered the pods multiple times since deployment — without any manual intervention.
 
-- Pod health verification
-- Service connectivity testing
-- Application health checks
-- Log ingestion testing
-
-This confirmed successful deployment.
+```bash
+kubectl get pods
+# RESTARTS: 3 (after system restarts)
+```
 
 ---
 
 ## Security Considerations
 
-Kubernetes was configured to improve operational security by providing:
-
-- Container isolation
-- Automated workload recovery
-- Reduced downtime
-- Consistent deployments
-- Controlled network exposure
-
-This improves platform resilience.
-
----
-
-## Kubernetes Architecture Diagram
-
-![Kubernetes Architecture Diagram](image-4.png)
-
----
-
-## Diagram Explanation
-
-The Kubernetes environment receives the container image built during the Docker stage.
-
-A deployment resource then creates multiple pods running the SIEM application.
-
-These pods are managed automatically by Kubernetes to ensure availability and recovery in case of failure.
-
-A service resource exposes the application internally and forwards client requests to healthy pods.
-
-Once traffic reaches the pods, the SIEM application processes incoming events and updates the dashboard in real time.
-
-This architecture demonstrates production-style orchestration, fault tolerance, and operational scalability.
+- Pods are isolated from the host — containers cannot directly access host resources
+- The NodePort service only exposes port 30564 externally
+- Port-forward is used for local access instead of exposing the cluster publicly
+- Kubernetes deployment history provides full rollback capability
