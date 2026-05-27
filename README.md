@@ -130,7 +130,7 @@ cd devsecops-siem-project
 
 ### 📸 Live Demo — Platform Startup
 
-![Platform Startup](Start%20Platform.gif)
+![Platform Startup](docs/gifs/Start%20Platform.gif)
 
 *One command starts the entire platform — Jenkins, SIEM dashboard, and ngrok tunnel — all running in under a minute.*
 
@@ -179,7 +179,7 @@ GitHub Webhook → ngrok → Jenkins
 
 ### 📸 Live Demo — CI/CD Pipeline
 
-![CI/CD Pipeline Demo](docs/DevSecOps.gif)
+![CI/CD Pipeline Demo](docs/gifs/DevSecOps.gif)
 
 *A git push automatically triggers the full Jenkins pipeline — build, push to DockerHub, deploy to Kubernetes — with zero manual intervention.*
 
@@ -191,7 +191,7 @@ A custom-built security monitoring dashboard that ingests events from multiple s
 
 ### 📸 Live Demo — SIEM Dashboard
 
-![SIEM Dashboard with Logs](Fake%20Logs.gif)
+![SIEM Dashboard with Logs](docs/gifs/Fake%20Logs.gif)
 
 *Demo log injection showing live severity classification across the SIEM dashboard — events colour-coded in real time by threat level.*
 
@@ -239,7 +239,7 @@ Provisions: VPC, public subnet, internet gateway, security group, SSH key pair, 
 
 ### 📸 Live Demo — EC2 Real Logs to SIEM
 
-![EC2 Logs to SIEM](EC2.gif)
+![EC2 Logs to SIEM](docs/gifs/EC2.gif)
 
 *Real system commands run on a live AWS EC2 instance — logs shipped directly to the SIEM dashboard via ngrok tunnel.*
 
@@ -265,7 +265,7 @@ terraform destroy
 
 ### 📸 Live Demo — Kubernetes
 
-![Kubernetes Running](Kubernetes.gif)
+![Kubernetes Running](docs/gifs/Kubernetes.gif)
 
 *Two replicas running with self-healing infrastructure — Kubernetes automatically restarts any failed pod.*
 
