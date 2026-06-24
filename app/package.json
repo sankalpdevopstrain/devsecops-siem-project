@@ -1,12 +1,13 @@
 {
   "name": "devsecops-siem-app",
-  "version": "1.0.0",
-  "description": "SIEM logging demo app",
+  "version": "2.0.0",
+  "description": "SIEM logging demo app with MongoDB persistent storage",
   "main": "app.js",
   "scripts": {
     "start": "node app.js"
   },
   "dependencies": {
-    "express": "^4.18.2"
+    "express": "^4.18.2",
+    "mongoose": "^7.0.0"
   }
 }

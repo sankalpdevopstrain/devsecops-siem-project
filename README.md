@@ -2,7 +2,7 @@
 
 > A cloud-native DevSecOps platform built from scratch — integrating CI/CD automation, container orchestration, infrastructure as code, and real-time security monitoring into a single production-style system.
 
-Built independently after completing a DevOps training programme, extending the course curriculum with Docker, Kubernetes, Terraform, AWS EC2, and a custom-built SIEM dashboard.
+Built independently after completing a DevOps training programme, extending the course curriculum with Docker, Kubernetes, Terraform, AWS EC2, MongoDB, and a custom-built professional SIEM dashboard.
 
 ---
 
@@ -15,7 +15,9 @@ Built independently after completing a DevOps training programme, extending the 
 | [📂 Project Structure](#-project-structure) | Repository layout |
 | [⚡ Quick Start](#-quick-start) | Get the platform running in minutes |
 | [🔄 CI/CD Pipeline](#-cicd-pipeline) | Automated build, push and deploy flow |
-| [🛡 SIEM Dashboard](#-siem-dashboard) | Security monitoring and event ingestion |
+| [🛡 SIEM Dashboard](#-siem-dashboard) | Professional security monitoring dashboard |
+| [🗄 MongoDB Storage](#-mongodb-storage) | Persistent log storage |
+| [🖥 Host Log Shipping](#-host-log-shipping) | Real-time local machine monitoring |
 | [☁ AWS EC2 + Terraform](#-aws-ec2--terraform) | Infrastructure as Code and cloud logging |
 | [📊 Kubernetes](#-kubernetes) | Orchestration and self-healing pods |
 | [🔮 Roadmap](#-roadmap) | Planned improvements |
@@ -26,15 +28,18 @@ Built independently after completing a DevOps training programme, extending the 
 ## 🏗 Architecture
 
 ```
-Developer Workstation
+Developer Workstation (Sankalp)
         │
-        ▼
-   GitHub Repository
-        │  webhook on every push
-        ▼
-   ngrok Tunnel
-        │
-        ▼
+        ├── Host Log Shipper ──────────────────────────┐
+        │   (CPU, Memory, Network, Processes)          │
+        │                                              ▼
+        ▼                                    SIEM Dashboard
+   GitHub Repository                         (Node.js + MongoDB)
+        │  webhook on every push                       ▲
+        ▼                                              │
+   ngrok Tunnel                             AWS EC2 Instance
+        │                                  provisioned via Terraform
+        ▼                                  ships real system logs
    Jenkins CI/CD (Docker container)
         │
         ├── Job 1: Build Docker Image
@@ -43,15 +48,7 @@ Developer Workstation
                          │
                          ▼
               Kubernetes Cluster
-              (2 replicas, self-healing)
-                         │
-                         ▼
-              SIEM Dashboard (port 3000)
-                         ▲
-                         │
-              AWS EC2 Instance
-              provisioned via Terraform
-              ships real system logs
+              (2 replicas + MongoDB pod)
 ```
 
 ---
@@ -67,7 +64,9 @@ Developer Workstation
 | Infrastructure as Code | Terraform | EC2 provisioning — no manual AWS console |
 | Cloud Compute | AWS EC2 | Cloud instance shipping real logs to SIEM |
 | Tunnelling | ngrok | Exposes local Jenkins via public HTTPS URL |
-| Security Monitoring | Custom Node.js SIEM | Real-time event ingestion + alert dashboard |
+| Database | MongoDB | Persistent log storage inside Kubernetes |
+| Security Monitoring | Custom Node.js SIEM | Real-time multi-source event dashboard |
+| Host Monitoring | Bash log shipper | Continuous local machine metrics to SIEM |
 
 ---
 
@@ -89,14 +88,16 @@ devsecops-siem-project/
 │   └── Jenkinsfile             # 3-job pipeline definition
 │
 ├── k8s/                        # Kubernetes manifests
-│   ├── deployment.yaml         # 2-replica deployment
+│   ├── deployment.yaml         # 2-replica SIEM app deployment
+│   ├── mongodb-deployment.yaml # MongoDB pod + ClusterIP service
 │   ├── service.yaml            # NodePort service
 │   └── ingress.yaml            # Ingress configuration
 │
 ├── scripts/                    # Platform automation
-│   ├── start-platform.sh       # Single-command startup
-│   ├── stop-platform.sh        # Clean shutdown
-│   └── inject-demo-logs.sh     # Demo log injection
+│   ├── start-platform.sh       # Single-command startup (all services)
+│   ├── stop-platform.sh        # Clean shutdown (all services)
+│   ├── inject-demo-logs.sh     # Demo log injection
+│   └── host-log-shipper.sh     # Continuous Windows host log shipper
 │
 ├── terraform/                  # Infrastructure as Code
 │   ├── main.tf                 # VPC, subnet, security group, EC2, key pair
@@ -132,7 +133,7 @@ cd devsecops-siem-project
 
 ![Platform Startup](docs/gifs/Start%20Platform.gif)
 
-*One command starts the entire platform — Jenkins, SIEM dashboard, and ngrok tunnel — all running in under a minute.*
+*One command starts the entire platform — Jenkins, SIEM dashboard, ngrok tunnel, and host log shipper — all running in under a minute.*
 
 ### Access the platform
 
@@ -187,39 +188,94 @@ GitHub Webhook → ngrok → Jenkins
 
 ## 🛡 SIEM Dashboard
 
-A custom-built security monitoring dashboard that ingests events from multiple sources and classifies them by severity.
+A professional-grade security monitoring dashboard ingesting real-time events from multiple sources, with persistent MongoDB storage, severity classification, live charts, and multi-source filtering.
 
 ### 📸 Live Demo — SIEM Dashboard
 
 ![SIEM Dashboard with Logs](docs/gifs/Fake%20Logs.gif)
 
-*Demo log injection showing live severity classification across the SIEM dashboard — events colour-coded in real time by threat level.*
+*Live severity classification across the SIEM dashboard — events colour-coded in real time by threat level.*
+
+### Dashboard Features
+
+| Feature | Description |
+|---|---|
+| Stat Cards | Total events, Critical, High, Low, Active Alerts, Active Sources |
+| Live Host Metrics | Real-time TCP connections and process count per host |
+| Filter Bar | Filter by severity, source, and event type |
+| Event Log Table | Timestamp, severity badge, source badge, host name, type, message |
+| Severity Chart | Doughnut chart — Critical / High / Low percentage breakdown |
+| Source Chart | Doughnut chart — event distribution by log source |
+| Active Sources | Live list of connected sources with event counts |
+| Auto-Refresh | Dashboard refreshes every 15 seconds automatically |
 
 ### Severity Classification
 
-| Event | Severity | Display |
-|---|---|---|
-| `failed_login` | HIGH | 🟥 Red border |
-| `level: error` | CRITICAL | 🔴 Red background |
-| `login_success` | LOW | 🟩 Green border |
-| `health_check` | LOW | 🟩 Green border |
+| Condition | Severity |
+|---|---|
+| `type: failed_login` | HIGH |
+| `level: error` | CRITICAL |
+| `type: login_success` | LOW |
+| `type: health_check` | LOW |
+| `process_count > 300` | HIGH |
+| `cpu_pct > 85` | CRITICAL |
 
 ### Log Sources
 
+- **Windows Host** — local machine uptime, disk usage, system metrics
+- **Windows Network** — active TCP connection count
+- **Windows Process** — running process count
 - **Jenkins** — build and deployment events
 - **GitHub** — webhook push events
 - **Kubernetes** — deployment status events
-- **AWS EC2** — real system logs via ngrok tunnel
-- **Manual** — operator events via `log` helper on EC2
+- **AWS EC2** — real cloud system logs via ngrok tunnel
 
 ### API Endpoints
 
 ```
-POST /logs            Ingest a log event
-GET  /logs            Retrieve all logs (JSON)
-GET  /health          Health check endpoint
-GET  /                Live dashboard UI
-POST /github-webhook  GitHub webhook receiver
+POST   /logs            Ingest a log event
+GET    /logs            Retrieve all logs (JSON)
+DELETE /logs            Clear all logs from MongoDB
+GET    /health          Health check + MongoDB status
+GET    /                Live dashboard UI
+POST   /github-webhook  GitHub webhook receiver
+```
+
+---
+
+## 🗄 MongoDB Storage
+
+Log events are stored persistently in MongoDB running as a Kubernetes pod — replacing the previous in-memory storage that lost all data on pod restart.
+
+```bash
+kubectl get pods
+# NAME                             READY   STATUS
+# devsecops-app-xxx                1/1     Running
+# devsecops-app-xxx                1/1     Running
+# mongodb-xxx                      1/1     Running
+```
+
+Logs survive pod restarts, redeployments, and crashes. The `DELETE /logs` endpoint is the only way to clear the dashboard.
+
+---
+
+## 🖥 Host Log Shipping
+
+A continuous bash script (`scripts/host-log-shipper.sh`) runs in the background and ships real Windows system events to the SIEM every 10 seconds:
+
+- **Active TCP connections** — network activity monitoring
+- **Running process count** — system load indicator
+- **Disk usage** — C: drive capacity monitoring
+- **System uptime** — availability tracking
+
+The shipper includes **offline buffering** — if the SIEM is unreachable, logs are queued locally and automatically replayed when the connection is restored.
+
+```bash
+# Starts automatically with the platform
+./scripts/start-platform.sh
+
+# Or run manually in a separate window
+./scripts/host-log-shipper.sh
 ```
 
 ---
@@ -270,7 +326,7 @@ terraform destroy
 *Two replicas running with self-healing infrastructure — Kubernetes automatically restarts any failed pod.*
 
 ```bash
-kubectl get pods          # Check running pods (2 replicas)
+kubectl get pods          # Check running pods (2 app replicas + MongoDB)
 kubectl get deployments   # Check deployment status
 kubectl get svc           # Check service exposure
 ```
@@ -279,11 +335,13 @@ kubectl get svc           # Check service exposure
 
 ## 🔮 Roadmap
 
-- [ ] Persistent log storage — replace in-memory with MongoDB
-- [ ] Auto-refresh SIEM dashboard
+- [x] Persistent log storage — MongoDB in Kubernetes
+- [x] Auto-refresh SIEM dashboard
+- [x] Professional cybersecurity dashboard with charts and filters
+- [x] Multi-source log ingestion (Windows host, EC2, Jenkins, GitHub, Kubernetes)
+- [ ] CloudWatch + SNS email alerts
+- [ ] Ansible EC2 configuration management
 - [ ] Jenkins deployed to EC2 via Terraform
-- [ ] ELK stack integration
-- [ ] Alert notifications via Slack or email
 - [ ] GitHub Actions as alternative CI/CD layer
 
 ---
@@ -301,6 +359,8 @@ kubectl get svc           # Check service exposure
 | [Webhook Integration](docs/07-webhook-integration.md) | GitHub to Jenkins automation |
 | [Terraform + EC2](docs/08-terraform-ec2.md) | Infrastructure as Code and cloud logging |
 | [Final Demo](docs/09-final-demo.md) | End-to-end platform walkthrough |
+| [MongoDB Storage](docs/10-mongodb-storage.md) | Persistent log storage implementation |
+| [Professional SIEM Dashboard](docs/11-siem-dashboard-professional.md) | Dashboard upgrade — charts, filters, host metrics |
 
 ---
 

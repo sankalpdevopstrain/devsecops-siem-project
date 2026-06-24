@@ -17,3 +17,6 @@ spec:
           image: sankalpdevops/devsecops-app:latest
           ports:
             - containerPort: 3000
+          env:
+            - name: MONGO_URL
+              value: "mongodb://mongodb-service:27017/siem"
