@@ -20,6 +20,7 @@ Built independently after completing a DevOps training programme, extending the 
 | [🖥 Host Log Shipping](#-host-log-shipping) | Real-time local machine monitoring |
 | [☁ AWS EC2 + Terraform](#-aws-ec2--terraform) | Infrastructure as Code and cloud logging |
 | [📊 Kubernetes](#-kubernetes) | Orchestration and self-healing pods |
+| [✅ Key Achievements](#-key-achievements) | What's been built and proven working |
 | [🔮 Roadmap](#-roadmap) | Planned improvements |
 | [📖 Documentation](#-documentation) | Full documentation suite |
 
@@ -196,6 +197,12 @@ A professional-grade security monitoring dashboard ingesting real-time events fr
 
 *Live severity classification across the SIEM dashboard — events colour-coded in real time by threat level.*
 
+### Professional Dashboard with Multi-Source Integration
+
+![Professional SIEM Dashboard](docs/image-15.png)
+
+*Real-time events ingested from the Windows host machine (Sankalp), AWS EC2, Jenkins, GitHub, and Kubernetes — each source colour-coded and labelled.*
+
 ### Dashboard Features
 
 | Feature | Description |
@@ -247,6 +254,10 @@ POST   /github-webhook  GitHub webhook receiver
 
 Log events are stored persistently in MongoDB running as a Kubernetes pod — replacing the previous in-memory storage that lost all data on pod restart.
 
+![MongoDB persistent storage verified](docs/image-9.png)
+
+*All 14 logs remain intact after a full pod restart — confirming MongoDB persistence is working correctly.*
+
 ```bash
 kubectl get pods
 # NAME                             READY   STATUS
@@ -269,6 +280,10 @@ A continuous bash script (`scripts/host-log-shipper.sh`) runs in the background 
 - **System uptime** — availability tracking
 
 The shipper includes **offline buffering** — if the SIEM is unreachable, logs are queued locally and automatically replayed when the connection is restored.
+
+![Host machine logs in SIEM](docs/image-16.png)
+
+*Real events from the local Windows host machine (`Sankalp`) appearing in the SIEM dashboard alongside cloud and CI/CD events — each row shows the originating host name and source.*
 
 ```bash
 # Starts automatically with the platform
@@ -333,16 +348,28 @@ kubectl get svc           # Check service exposure
 
 ---
 
+## ✅ Key Achievements
+
+| Capability | Detail |
+|---|---|
+| Persistent storage | Migrated from in-memory logs to MongoDB running in Kubernetes — logs now survive pod restarts, redeployments, and crashes |
+| Real-time dashboard | Professional cybersecurity-style UI with auto-refresh every 15 seconds, live charts, and severity classification |
+| Multi-source ingestion | Five independent log sources unified into a single platform: Windows host machine, AWS EC2, Jenkins, GitHub, and Kubernetes |
+| Resilient log shipping | Continuous background log shipper with offline buffering — events queue locally and auto-replay when the SIEM reconnects |
+| Zero-downtime self-healing | Two-replica Kubernetes deployment automatically recovers from pod failures with no manual intervention |
+
+---
+
 ## 🔮 Roadmap
 
-- [x] Persistent log storage — MongoDB in Kubernetes
-- [x] Auto-refresh SIEM dashboard
-- [x] Professional cybersecurity dashboard with charts and filters
-- [x] Multi-source log ingestion (Windows host, EC2, Jenkins, GitHub, Kubernetes)
-- [ ] CloudWatch + SNS email alerts
-- [ ] Ansible EC2 configuration management
-- [ ] Jenkins deployed to EC2 via Terraform
-- [ ] GitHub Actions as alternative CI/CD layer
+The following are the next planned enhancements to extend the platform's operational and cloud-native maturity:
+
+| Feature | Description |
+|---|---|
+| CloudWatch + SNS alerts | AWS-native monitoring with email notifications via Gmail when critical events are detected |
+| Ansible | Configuration management playbook to automate EC2 provisioning alongside Terraform |
+| Jenkins on EC2 | Deploy Jenkins itself to AWS EC2 via Terraform, removing the local-machine dependency |
+| GitHub Actions | Alternative CI/CD layer running in parallel with Jenkins |
 
 ---
 
